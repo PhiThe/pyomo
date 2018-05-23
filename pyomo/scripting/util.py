@@ -15,11 +15,15 @@ import os
 import sys
 import traceback
 import types
-import time
 import json
 from six import itervalues, iterkeys, iteritems
 from six.moves import xrange
 from pyomo.common import pyomo_api
+
+try:
+    from time import process_time as current_time
+except:
+    from time import clock as current_time
 
 try:
     import yaml
@@ -103,7 +107,7 @@ def setup_environment(data):
                 data.options.postsolve.results_format = 'json'
     #
     global start_time
-    start_time = time.time()
+    start_time = current_time()
     if not data.options.runtime.logging == 'quiet':
         sys.stdout.write('[%8.2f] Setting up Pyomo environment\n' % 0.0)
         sys.stdout.flush()
@@ -191,7 +195,7 @@ def apply_preprocessing(data, parser=None):
     data.local = pyutilib.misc.Options()
     #
     if not data.options.runtime.logging == 'quiet':
-        sys.stdout.write('[%8.2f] Applying Pyomo preprocessing actions\n' % (time.time()-start_time))
+        sys.stdout.write('[%8.2f] Applying Pyomo preprocessing actions\n' % (current_time()-start_time))
         sys.stdout.flush()
     #
     global filter_excepthook
@@ -219,9 +223,9 @@ def apply_preprocessing(data, parser=None):
             raise IOError("File "+file+" does not exist!")
     #
     filter_excepthook=True
-    tick = time.time()
+    tick = current_time()
     data.local.usermodel = pyutilib.misc.import_file(data.options.model.filename, clear_cache=True)
-    data.local.time_initial_import = time.time()-tick
+    data.local.time_initial_import = current_time()-tick
     filter_excepthook=False
 
     usermodel_dir = dir(data.local.usermodel)
@@ -262,7 +266,7 @@ def create_model(data):
     """
     #
     if not data.options.runtime.logging == 'quiet':
-        sys.stdout.write('[%8.2f] Creating model\n' % (time.time()-start_time))
+        sys.stdout.write('[%8.2f] Creating model\n' % (current_time()-start_time))
         sys.stdout.flush()
     #
     if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
@@ -307,12 +311,12 @@ def create_model(data):
             raise SystemExit(msg % data.options.model.filename)
         else:
             model_options = data.options.model.options.value()
-            tick = time.time()
+            tick = current_time()
             model = ep.service().apply( options = pyutilib.misc.Container(*data.options), model_options=pyutilib.misc.Container(*model_options) )
             if data.options.runtime.report_timing is True:
-                print("      %6.2f seconds required to construct instance" % (time.time() - tick))
+                print("      %6.2f seconds required to construct instance" % (current_time() - tick))
                 data.local.time_initial_import = None
-                tick = time.time()
+                tick = current_time()
     else:
         if model_name not in _models:
             msg = "Model '%s' is not defined in file '%s'!"
@@ -354,7 +358,7 @@ def create_model(data):
         if data.options.runtime.report_timing is True and not data.local.time_initial_import is None:
             print("      %6.2f seconds required to construct instance" % (data.local.time_initial_import))
     else:
-        tick = time.time()
+        tick = current_time()
         if len(data.options.data.files) > 1:
             #
             # Load a list of *.dat files
@@ -428,17 +432,17 @@ def create_model(data):
                                              profile_memory=data.options.runtime.profile_memory,
                                              report_timing=data.options.runtime.report_timing)
         if data.options.runtime.report_timing is True:
-            print("      %6.2f seconds required to construct instance" % (time.time() - tick))
+            print("      %6.2f seconds required to construct instance" % (current_time() - tick))
 
     #
-    modify_start_time = time.time()
+    modify_start_time = current_time()
     for ep in ExtensionPoint(IPyomoScriptModifyInstance):
         if data.options.runtime.report_timing is True:
-            tick = time.time()
+            tick = current_time()
         ep.apply( options=data.options, model=model, instance=instance )
         if data.options.runtime.report_timing is True:
-            print("      %6.2f seconds to apply %s" % (time.time() - tick, type(ep)))
-            tick = time.time()
+            print("      %6.2f seconds to apply %s" % (current_time() - tick, type(ep)))
+            tick = current_time()
     #
     for transformation in data.options.transform:
         with TransformationFactory(transformation) as xfrm:
@@ -448,7 +452,7 @@ def create_model(data):
                                  "transformation '%s'" % transformation)
     #
     if data.options.runtime.report_timing is True:
-        total_time = time.time() - modify_start_time
+        total_time = current_time() - modify_start_time
         print("      %6.2f seconds required for problem transformations" % total_time)
 
     if logger.isEnabledFor(logging.DEBUG):
@@ -464,7 +468,7 @@ def create_model(data):
     if not data.options.model.save_file is None:
 
         if data.options.runtime.report_timing is True:
-            write_start_time = time.time()
+            write_start_time = current_time()
 
         if data.options.model.save_file == True:
             if data.local.model_format in (ProblemFormat.cpxlp, ProblemFormat.lpxlp):
@@ -492,7 +496,7 @@ def create_model(data):
                 print("Model written to file '"+str(fname)+"'")
 
         if data.options.runtime.report_timing is True:
-            total_time = time.time() - write_start_time
+            total_time = current_time() - write_start_time
             print("      %6.2f seconds required to write file" % total_time)
 
         if (pympler_available is True) and (data.options.runtime.profile_memory >= 2):
@@ -530,7 +534,7 @@ def apply_optimizer(data, instance=None):
     """
     #
     if not data.options.runtime.logging == 'quiet':
-        sys.stdout.write('[%8.2f] Applying solver\n' % (time.time()-start_time))
+        sys.stdout.write('[%8.2f] Applying solver\n' % (current_time()-start_time))
         sys.stdout.flush()
     #
     #
@@ -675,7 +679,7 @@ def process_results(data, instance=None, results=None, opt=None):
     """
     #
     if not data.options.runtime.logging == 'quiet':
-        sys.stdout.write('[%8.2f] Processing results\n' % (time.time()-start_time))
+        sys.stdout.write('[%8.2f] Processing results\n' % (current_time()-start_time))
         sys.stdout.flush()
     #
     if data.options.postsolve.print_logfile:
@@ -760,7 +764,7 @@ def apply_postprocessing(data, instance=None, results=None):
     """
     #
     if not data.options.runtime.logging == 'quiet':
-        sys.stdout.write('[%8.2f] Applying Pyomo postprocessing actions\n' % (time.time()-start_time))
+        sys.stdout.write('[%8.2f] Applying Pyomo postprocessing actions\n' % (current_time()-start_time))
         sys.stdout.flush()
 
     # options are of type ConfigValue, not raw strings / atomics.
@@ -813,7 +817,7 @@ def finalize(data, model=None, instance=None, results=None):
     ##print "HERE - usermodel_plugins"
     ##
     if not data.options.runtime.logging == 'quiet':
-        sys.stdout.write('[%8.2f] Pyomo Finished\n' % (time.time()-start_time))
+        sys.stdout.write('[%8.2f] Pyomo Finished\n' % (current_time()-start_time))
         if (pympler_available is True) and (data.options.runtime.profile_memory >= 1):
             sys.stdout.write('Maximum memory used = %d bytes\n' % data.local.max_memory)
         sys.stdout.flush()

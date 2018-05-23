@@ -14,9 +14,13 @@ import logging
 import sys
 from weakref import ref as weakref_ref
 import gc
-import time
 import math
 import functools
+
+try:
+    from time import process_time as current_time
+except:
+    from time import clock as current_time
 
 try:
     from collections import OrderedDict
@@ -729,12 +733,12 @@ arguments (which have been ignored):"""
         if False and preprocess is True:
 
             if report_timing is True:
-                start_time = time.time()
+                start_time = current_time
 
             instance.preprocess()
 
             if report_timing is True:
-                total_time = time.time() - start_time
+                total_time = current_time() - start_time
                 print("      %6.2f seconds required for preprocessing" % total_time)
 
             if (pympler_available is True) and (profile_memory >= 2):
@@ -869,7 +873,7 @@ from solvers are immediately loaded into the original model instance.""")
 
                 self._initialize_component(modeldata, namespaces, component_name, profile_memory)
                 if False:
-                    total_time = time.time() - start_time
+                    total_time = current_time() - start_time
                     if isinstance(component, IndexedComponent):
                         clen = len(component)
                     else:

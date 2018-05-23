@@ -23,7 +23,6 @@ import itertools
 import logging
 import operator
 import os
-import time
 
 from pyutilib.math.util import isclose
 from pyutilib.misc import PauseGC
@@ -51,6 +50,12 @@ from pyomo.core.kernel.component_variable import IVariable
 
 from six import itervalues, iteritems
 from six.moves import xrange, zip
+
+try:
+    from time import process_time as current_time
+except:
+    from time import clock as current_time
+
 
 _using_pyomo4_trees = EXPR.mode == EXPR.Mode.pyomo4_trees
 _using_pyomo5_trees = EXPR.mode == EXPR.Mode.pyomo5_trees
@@ -171,13 +176,13 @@ def _get_bound(exp):
 class StopWatch(object):
 
     def __init__(self):
-        self.start = time.time()
+        self.start = current_time()
 
     def report(self, msg):
-        print(msg+" (seconds): "+str(time.time()-self.start))
+        print(msg+" (seconds): "+str(current_time()-self.start))
 
     def reset(self):
-        self.start = time.time()
+        self.start = current_time()
 
 class _Counter(object):
 
